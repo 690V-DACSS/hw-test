@@ -1,0 +1,264 @@
+---
+title: "HW4 Dashboard"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(readxl)
+library(rio)
+library(lubridate)
+library(patchwork)
+```
+
+```{r}
+mass_arrests <- read_excel("../data/Mass_Arrests.xlsx", sheet = 1)
+safe_cities  <- import("../data/safeCities_ecoUI.xlsx")
+covid_data   <- read_csv("../data/covid-19.csv")
+
+mass_arrests2 <- mass_arrests %>%
+  mutate(
+    Race = as.factor(Race),
+    Sex = as.factor(Sex),
+    `Arrest Type` = as.factor(`Arrest Type`),
+    Ethnicity = as.factor(Ethnicity)
+  )
+
+covid_data2 <- covid_data %>%
+  mutate(date = mdy(date))
+
+numcat_data <- mass_arrests2 %>%
+  filter(!is.na(Age), !is.na(Race))
+
+covid_us <- covid_data2 %>%
+  filter(Entity == "United States") %>%
+  drop_na(daily_cases_mean, daily_deaths_mean, date)
+
+covid_us_pos <- covid_us %>%
+  filter(daily_cases_mean > 0, daily_deaths_mean > 0)
+
+catcat_data <- mass_arrests2 %>%
+  filter(!is.na(Race), !is.na(Sex)) %>%
+  count(Race, Sex)
+
+race_labels <- c(
+  "B" = "Black",
+  "H" = "Hispanic",
+  "I" = "Native Am.",
+  "J" = "Asian",
+  "O" = "Other",
+  "U" = "Unknown",
+  "W" = "White"
+)
+
+sex_labels <- c(
+  "F" = "Female",
+  "M" = "Male",
+  "U" = "Unknown"
+)
+
+safe_avg <- safe_cities %>%
+  select(-Overall_Score) %>%
+  pivot_longer(
+    cols = -city,
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  mutate(
+    type = if_else(str_detect(variable, "_In_"), "input", "output"),
+    dimension = str_sub(variable, 1, 1)
+  ) %>%
+  group_by(city, type, dimension) %>%
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop")
+
+safe_avg_in <- safe_avg %>%
+  filter(type == "input") %>%
+  mutate(
+    dimension = factor(
+      dimension,
+      levels = c("D", "E", "H", "I", "P"),
+      labels = c("DIGI", "ENVIR", "HEALTH", "INFRA", "PERS")
+    )
+  )
+
+selected_cities <- c(
+  "New York",
+  "London",
+  "Singapore",
+  "Tokyo",
+  "Paris",
+  "Dubai"
+)
+
+safe_small <- safe_avg_in %>%
+  filter(city %in% selected_cities) %>%
+  mutate(
+    dimension = factor(
+      dimension,
+      levels = c("DIGI", "ENVIR", "HEALTH", "INFRA", "PERS")
+    )
+  )
+```
+
+Row
+-------------------------------------
+
+### Cat-Cat
+
+```{r}
+ggplot(catcat_data, aes(x = Race, y = n, fill = Sex)) +
+  geom_col(position = "dodge") +
+  scale_x_discrete(labels = race_labels) +
+  scale_fill_discrete(labels = sex_labels) +
+  labs(
+    title = "Arrests by Race and Sex",
+    subtitle = "Massachusetts arrests data",
+    x = "Race",
+    y = "Count",
+    fill = "Sex"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11)
+  )
+```
+
+Row
+-------------------------------------
+
+### Num-Num
+
+```{r}
+ggplot(covid_us_pos, aes(x = daily_cases_mean, y = daily_deaths_mean)) +
+  geom_point(alpha = 0.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(
+    title = "Daily COVID-19 cases and deaths",
+    subtitle = "United States (positive values only, log scales)",
+    x = "Daily cases mean (log10)",
+    y = "Daily deaths mean (log10)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 11)
+  )
+```
+
+Row
+-------------------------------------
+
+### Num-Cat
+
+```{r}
+ggplot(numcat_data, aes(x = reorder(Race, Age, FUN = median), y = Age)) +
+  geom_boxplot() +
+  scale_x_discrete(labels = race_labels) +
+  labs(
+    title = "Age distribution by Race",
+    subtitle = "Massachusetts arrests data",
+    x = "Race",
+    y = "Age"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 13),
+    axis.text = element_text(size = 11)
+  )
+```
+
+
+Row
+-------------------------------------
+
+Column
+-------------------------------------
+
+### Original
+
+```{r}
+ggplot(
+  safe_small %>%
+    mutate(
+      dim_short = factor(
+        dimension,
+        levels = c("DIGI", "ENVIR", "HEALTH", "INFRA", "PERS"),
+        labels = c("DG", "EN", "HL", "IN", "PR")
+      )
+    ),
+  aes(x = dim_short, y = value, group = city, color = city)
+) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.2) +
+  coord_polar() +
+  facet_wrap(~city, ncol = 3) +
+  labs(
+    title = "Original multivariate view",
+    subtitle = "Radar-style plot of average input dimensions",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    strip.text = element_text(size = 13, face = "bold"),
+    axis.text = element_text(size = 9),
+    legend.position = "none"
+  )
+
+```
+
+Column
+-------------------------------------
+
+### Improved
+
+```{r}
+ggplot(safe_small, aes(x = dimension, y = value)) +
+  geom_segment(aes(xend = dimension, y = 0, yend = value), color = "gray70") +
+  geom_point(size = 2.5) +
+  facet_wrap(~city, ncol = 3) +
+  labs(
+    title = "Improved multivariate view",
+    subtitle = "Dot plot of average input dimensions",
+    x = "Dimension",
+    y = "Average score"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    strip.text = element_text(size = 13, face = "bold"),
+    axis.title = element_text(size = 13),
+    axis.text.x = element_text(size = 10, angle = 25, hjust = 1),
+    axis.text.y = element_text(size = 10)
+  )
+
+```
+
+
+
+
+
+
+
+
+
+
+
