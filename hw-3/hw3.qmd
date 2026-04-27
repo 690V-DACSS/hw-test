@@ -1,0 +1,92 @@
+---
+title: "HW3 Dashboard"
+format: html
+editor: visual
+---
+
+## Load libraries
+
+```{r}
+library(tidyverse) 
+
+library(readxl)
+```
+
+```{r}
+data <- read_excel("data/ncesdata_MASS_202425.xlsx", skip = 11)
+
+glimpse(data)
+
+```
+
+You can add options to executable code like this
+
+```{r}
+unique(data$Locale)
+
+```
+
+```{r}
+summary(data$Students)
+
+```
+
+```{r}
+data$Students <- as.numeric(data$Students)
+
+
+```
+
+```{r}
+summary(data$Students)
+
+
+```
+
+```{r}
+library(dplyr)
+
+locale_counts <- data %>%
+  count(Locale) %>%
+  arrange(desc(n))
+
+
+```
+
+## Categorical Variable: Locale
+
+This plot shows the number of schools by locale in Massachusetts.
+
+```{r}
+ggplot(locale_counts, aes(x = reorder(Locale, -n), y = n)) +
+  geom_col(fill = "#2C6BAA") +
+  labs(
+    title = "Number of Schools by Locale in Massachusetts",
+    x = "School Locale",
+    y = "Number of Schools",
+    caption = "Source: NCES"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
+
+## Numerical Variable: Students
+
+This histogram shows the distribution of student enrollment across schools.
+
+```{r}
+ggplot(data, aes(x = Students)) +
+  geom_histogram(fill = "#E69F00", bins = 30, color = "white") +
+  labs(
+    title = "Distribution of Student Enrollment in Massachusetts Schools",
+    x = "Number of Students",
+    y = "Number of Schools",
+    caption = "Source: NCES"
+  ) +
+  theme_minimal()
+
+
+```
