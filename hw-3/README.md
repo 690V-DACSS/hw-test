@@ -3,10 +3,10 @@
 📊 **Dashboard**
 
 🔗 **GitHub Repository**  
-https://github.com/690V-DACSS/hw-3
+[https://github.com/690V-DACSS/hw-test/tree/main/hw-3](https://github.com/690V-DACSS/hw-test/tree/main/hw-3)
 
 🌐 **Live Dashboard**  
-https://690v-dacss.github.io/hw-3/
+[https://690v-dacss.github.io/hw-test/hw-3/hw3_dashboard.html](https://690v-dacss.github.io/hw-test/hw-3/hw3_dashboard.html)
 
 ---
 
@@ -18,9 +18,9 @@ The goal of this assignment is to create two univariate plots:
 - one numerical variable
 
 ## Files
-- `hw3.qmd` – Quarto source file
-- `hw3.html` – rendered dashboard
-- `data/` – dataset used for the analysis
+- `hw3_dashboard.Rmd` - dashboard source file
+- `hw3_dashboard.html` - rendered dashboard
+- `data/` - dataset used for the analysis
 
 ## Author
 Abylai Omar
