@@ -1,0 +1,95 @@
+---
+title: "HW3 Dashboard"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(readxl)
+```
+
+```{r data}
+tmp <- read_excel("data/ncesdata_MASS_202425.xlsx", skip = 9, col_names = FALSE)
+
+header <- unlist(tmp[3, ], use.names = FALSE)
+school_data <- tmp[-c(1, 2, 3), ]
+colnames(school_data) <- header
+
+school_data <- school_data %>%
+  mutate(
+    Locale = as.factor(Locale),
+    Students = as.numeric(Students)
+  )
+```
+
+## Column {data-width=320}
+
+### About
+
+This dashboard presents two univariate visualizations using Massachusetts school data.
+
+The categorical plot shows the distribution of schools by locale.
+
+The numerical plot shows the distribution of student enrollment.
+
+## Column
+
+### Categorical variable: Locale
+
+```{r cat-plot}
+cat_data <- school_data %>%
+  filter(!is.na(Locale), Locale != "") %>%
+  count(Locale, name = "Count") %>%
+  mutate(
+    Percent = Count / sum(Count) * 100,
+    Label = paste0(round(Percent, 1), "%"),
+    Locale = forcats::fct_reorder(Locale, Percent)
+  )
+
+ggplot(cat_data, aes(x = Locale, y = Percent)) +
+  geom_col(fill = "gray65", width = 0.7) +
+  geom_text(aes(label = Label), hjust = -0.1, size = 5) +
+  coord_flip() +
+  labs(
+    title = "Distribution of Schools by Locale",
+    subtitle = "Massachusetts school data",
+    x = NULL,
+    y = "Percent"
+  ) +
+  expand_limits(y = max(cat_data$Percent) + 5) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 13),
+    axis.text.y = element_text(size = 11),
+    axis.text.x = element_text(size = 11),
+    panel.grid.minor = element_blank()
+  )
+```
+
+### Numerical variable: Students
+
+```{r}
+ggplot(school_data, aes(x = Students)) +
+  geom_histogram(bins = 30, fill = "gray30", color = "white") +
+  labs(
+    title = "Distribution of Student Enrollment",
+    subtitle = "Massachusetts school data",
+    x = "Number of students",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 13),
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+
